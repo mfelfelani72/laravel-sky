@@ -2,7 +2,7 @@
 
 /**
  * Laravel Starter Setup Script
- * Works with src/ structure, vendor inside src/, Web/API selection
+ * Supports Web/API projects, src/ structure, vendor inside src/
  */
 
 $root = __DIR__ . '/../';
@@ -19,6 +19,7 @@ $middlewaresPath = $laravel . 'app/Http/Middleware';
 $databasePath = $laravel . 'database/database.sqlite';
 $envPath = $laravel . '.env';
 $envExample = $laravel . '.env.example';
+$providerPath = $laravel . 'app/Providers/AppServiceProvider.php';
 
 // Helper to create .keep files
 function createKeepFile($path) {
@@ -64,11 +65,59 @@ if ($type === 'api') {
     if (!is_dir($apiControllersPath)) mkdir($apiControllersPath, 0755, true);
     createKeepFile($apiControllersPath);
 
-    // Routes
-    file_put_contents($webRoutes, "<?php\n// Web routes disabled for API project.\n");
-    file_put_contents($apiRoutes, "<?php\nuse Illuminate\Support\Facades\Route;\nRoute::get('/ping', function() {\n    return response()->json(['pong' => true]);\n});\n");
+    // AuthController
+    $authController = $apiControllersPath . '/AuthController.php';
+    if (!file_exists($authController)) {
+        file_put_contents($authController, <<<PHP
+<?php
+namespace App\Http\Controllers\API;
 
-    // Middleware example
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
+
+class AuthController extends Controller
+{
+    public function register(Request \$request) {
+        \$user = User::create([
+            'name' => \$request->name,
+            'email' => \$request->email,
+            'password' => Hash::make(\$request->password),
+        ]);
+        \$token = \$user->createToken('api-token')->plainTextToken;
+        return response()->json(['token' => \$token], 201);
+    }
+
+    public function login(Request \$request) {
+        \$user = User::where('email', \$request->email)->first();
+        if (!\$user || !Hash::check(\$request->password, \$user->password)) {
+            return response()->json(['message' => 'Invalid credentials'], 401);
+        }
+        \$token = \$user->createToken('api-token')->plainTextToken;
+        return response()->json(['token' => \$token]);
+    }
+}
+PHP
+        );
+    }
+
+    // Routes
+    file_put_contents($apiRoutes, <<<PHP
+<?php
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\API\AuthController;
+
+Route::post('/register', [AuthController::class, 'register']);
+Route::post('/login', [AuthController::class, 'login']);
+Route::get('/ping', function() {
+    return response()->json(['pong' => true]);
+});
+PHP
+    );
+    file_put_contents($webRoutes, "<?php\n// Web routes disabled for API project.\n");
+
+    // Middleware
     if (!is_dir($middlewaresPath)) mkdir($middlewaresPath, 0755, true);
     $apiMiddleware = $middlewaresPath . '/ApiMiddleware.php';
     if (!file_exists($apiMiddleware)) {
@@ -87,6 +136,29 @@ class ApiMiddleware {
 PHP
         );
     }
+
+    // AppServiceProvider modification
+    if (file_exists($providerPath)) {
+        $providerContent = file_get_contents($providerPath);
+        if (!str_contains($providerContent, 'pushMiddlewareToGroup')) {
+            $insert = <<<PHP
+
+        // Add API middleware dynamically
+        \$router = \$this->app->make(\Illuminate\Routing\Router::class);
+        \$router->pushMiddlewareToGroup('api', \App\Http\Middleware\ApiMiddleware::class);
+
+PHP;
+            $providerContent = preg_replace('/public function boot\(\)\s*\{/', "public function boot()\n    { $insert", $providerContent, 1);
+            file_put_contents($providerPath, $providerContent);
+            echo "AppServiceProvider updated to register ApiMiddleware\n";
+        }
+    }
+
+    // Install Sanctum
+    echo "Installing Laravel Sanctum...\n";
+    shell_exec("composer require laravel/sanctum");
+    shell_exec("php " . escapeshellarg($laravel . "artisan") . " vendor:publish --provider=\"Laravel\\Sanctum\\SanctumServiceProvider\"");
+    shell_exec("php " . escapeshellarg($laravel . "artisan") . " migrate");
 
 } else {
     echo "Setting up Web project...\n";
@@ -110,7 +182,6 @@ PHP
 // Step 5: Artisan commands
 echo "Generating key and migrating database...\n";
 $artisan = escapeshellarg($laravel . 'artisan');
-
 shell_exec("php $artisan key:generate");
 shell_exec("php $artisan migrate --force");
 
