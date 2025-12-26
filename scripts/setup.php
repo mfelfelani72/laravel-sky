@@ -2,17 +2,17 @@
 /**
  * Laravel Starter Setup Script
  * Supports Web or API project
+ * Assumes project is in root (no src/)
  */
 
-$root = __DIR__ . '/../';
-$src = $root . 'src/';
+$root = __DIR__ . '/';
 $templates = $root . 'templates/';
 
 // Paths
-$bootstrapFile = $src . 'bootstrap/app.php';
-$webRoutes = $src . 'routes/web.php';
-$apiRoutes = $src . 'routes/api.php';
-$viewsPath = $src . 'resources/views';
+$bootstrapFile = $root . 'bootstrap/app.php';
+$webRoutes = $root . 'routes/web.php';
+$apiRoutes = $root . 'routes/api.php';
+$viewsPath = $root . 'resources/views';
 
 // Helper to delete folder recursively
 function deleteFolder($folder) {
@@ -79,3 +79,8 @@ PHP;
 }
 
 echo "\nSetup complete! Your Laravel project is now configured as a '$type' project.\n";
+if ($type === 'api') {
+    echo "Test your API with: http://127.0.0.1:8000/api/ping\n";
+} else {
+    echo "Visit your web project at / (root route)\n";
+}
