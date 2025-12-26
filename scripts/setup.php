@@ -165,8 +165,13 @@ PHP;
 
     // Install Sanctum
     echo "Installing Laravel Sanctum...\n";
-    shell_exec("composer require laravel/sanctum");
-    shell_exec("php " . escapeshellarg($laravel . "artisan") . " vendor:publish --provider=\"Laravel\\Sanctum\\SanctumServiceProvider\"");
+    // Run composer in project root to avoid creating a second vendor folder
+    shell_exec("composer require laravel/sanctum --working-dir=" . escapeshellarg($root));
+
+    // Use Artisan inside src/ for publishing
+    $artisan = escapeshellarg($laravel . 'artisan');
+    shell_exec("php $artisan vendor:publish --provider=\"Laravel\\Sanctum\\SanctumServiceProvider\" --force");
+
 } else {
     echo "Setting up Web project...\n";
 
