@@ -156,16 +156,24 @@ PHP;
     // Update bootstrap/app.php for API
     if (file_exists($bootstrapFile)) {
         $content = file_get_contents($bootstrapFile);
-        $content = preg_replace(
-            "/api: __DIR__.'\/\.\.\/routes\/api\.php'/",
-            "api: __DIR__.'/../routes/api.php'",
-            $content
-        );
-        $content = preg_replace(
-            "/web: __DIR__.'\/\.\.\/routes\/web\.php'/",
-            "// web routes disabled for API",
-            $content
-        );
+
+        // Add or replace api route line
+        if (!str_contains($content, "api: __DIR__.'/../routes/api.php'")) {
+            // Add api line after return Application::configure(...)
+            $content = preg_replace(
+                "/return Application::configure\(basePath: dirname\(__DIR__\)\)/",
+                "return Application::configure(basePath: dirname(__DIR__))
+    ->withRouting(
+        api: __DIR__.'/../routes/api.php',",
+                $content
+            );
+            // Comment web route if exists
+            $content = preg_replace(
+                "/web: __DIR__.'\/\.\.\/routes\/web\.php'/",
+                "// web: __DIR__.'/../routes/web.php',",
+                $content
+            );
+        }
         file_put_contents($bootstrapFile, $content);
         echo "Bootstrap file updated for API project.\n";
     }
@@ -197,16 +205,23 @@ PHP;
     // Update bootstrap/app.php for Web
     if (file_exists($bootstrapFile)) {
         $content = file_get_contents($bootstrapFile);
-        $content = preg_replace(
-            "/web: __DIR__.'\/\.\.\/routes\/web\.php'/",
-            "web: __DIR__.'/../routes/web.php'",
-            $content
-        );
-        $content = preg_replace(
-            "/api: __DIR__.'\/\.\.\/routes\/api\.php'/",
-            "// api routes disabled for Web",
-            $content
-        );
+
+        // Add or replace web route line
+        if (!str_contains($content, "web: __DIR__.'/../routes/web.php'")) {
+            $content = preg_replace(
+                "/return Application::configure\(basePath: dirname\(__DIR__\)\)/",
+                "return Application::configure(basePath: dirname(__DIR__))
+    ->withRouting(
+        web: __DIR__.'/../routes/web.php',",
+                $content
+            );
+            // Comment api route if exists
+            $content = preg_replace(
+                "/api: __DIR__.'\/\.\.\/routes\/api\.php'/",
+                "// api: __DIR__.'/../routes/api.php',",
+                $content
+            );
+        }
         file_put_contents($bootstrapFile, $content);
         echo "Bootstrap file updated for Web project.\n";
     }
