@@ -2,7 +2,7 @@
 
 /**
  * Laravel Starter Setup Script
- * Supports Web/API projects, src/ structure, vendor inside src/
+ * Full Web/API setup for src/ structure with vendor inside src/
  */
 
 $root = __DIR__ . '/../';
@@ -20,6 +20,7 @@ $databasePath = $laravel . 'database/database.sqlite';
 $envPath = $laravel . '.env';
 $envExample = $laravel . '.env.example';
 $providerPath = $laravel . 'app/Providers/AppServiceProvider.php';
+$bootstrapFile = $laravel . 'bootstrap/app.php';
 
 // Helper to create .keep files
 function createKeepFile($path) {
@@ -110,9 +111,7 @@ use App\Http\Controllers\API\AuthController;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
-Route::get('/ping', function() {
-    return response()->json(['pong' => true]);
-});
+Route::get('/ping', fn() => response()->json(['pong' => true]));
 PHP
     );
     file_put_contents($webRoutes, "<?php\n// Web routes disabled for API project.\n");
@@ -154,6 +153,23 @@ PHP;
         }
     }
 
+    // Update bootstrap/app.php for API
+    if (file_exists($bootstrapFile)) {
+        $content = file_get_contents($bootstrapFile);
+        $content = preg_replace(
+            "/api: __DIR__.'\/\.\.\/routes\/api\.php'/",
+            "api: __DIR__.'/../routes/api.php'",
+            $content
+        );
+        $content = preg_replace(
+            "/web: __DIR__.'\/\.\.\/routes\/web\.php'/",
+            "// web routes disabled for API",
+            $content
+        );
+        file_put_contents($bootstrapFile, $content);
+        echo "Bootstrap file updated for API project.\n";
+    }
+
     // Install Sanctum
     echo "Installing Laravel Sanctum...\n";
     shell_exec("composer require laravel/sanctum");
@@ -175,8 +191,25 @@ PHP;
     file_put_contents($viewsPath . '/welcome.blade.php', "<h1>Welcome to Web Project</h1>");
 
     // Routes
-    file_put_contents($webRoutes, "<?php\nuse Illuminate\Support\Facades\Route;\nRoute::get('/', function() {\n    return view('welcome');\n});\n");
+    file_put_contents($webRoutes, "<?php\nuse Illuminate\Support\Facades\Route;\nRoute::get('/', fn() => view('welcome'));\n");
     file_put_contents($apiRoutes, "<?php\n// API routes disabled for Web project.\n");
+
+    // Update bootstrap/app.php for Web
+    if (file_exists($bootstrapFile)) {
+        $content = file_get_contents($bootstrapFile);
+        $content = preg_replace(
+            "/web: __DIR__.'\/\.\.\/routes\/web\.php'/",
+            "web: __DIR__.'/../routes/web.php'",
+            $content
+        );
+        $content = preg_replace(
+            "/api: __DIR__.'\/\.\.\/routes\/api\.php'/",
+            "// api routes disabled for Web",
+            $content
+        );
+        file_put_contents($bootstrapFile, $content);
+        echo "Bootstrap file updated for Web project.\n";
+    }
 }
 
 // Step 5: Artisan commands
