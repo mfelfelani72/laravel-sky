@@ -2,10 +2,10 @@
 /**
  * Laravel Starter Setup Script
  * Supports Web or API project
- * Assumes project is in root (no src/)
+ * Works without src/ folder
  */
 
-$root = __DIR__ . '/';
+$root = __DIR__ . '/../'; // اگر setup.php داخل scripts/ است
 $templates = $root . 'templates/';
 
 // Paths
@@ -27,6 +27,15 @@ function deleteFolder($folder) {
     rmdir($folder);
 }
 
+// Ensure routes folder exists
+if (!is_dir($root.'routes')) mkdir($root.'routes', 0755, true);
+
+// Ensure bootstrap folder exists
+if (!is_dir($root.'bootstrap')) mkdir($root.'bootstrap', 0755, true);
+
+// Ensure resources folder exists
+if (!is_dir($root.'resources')) mkdir($root.'resources', 0755, true);
+
 // Step 1: Ask for project type
 $handle = fopen("php://stdin", "r");
 echo "Which type of project do you want? (web/api) [web]: ";
@@ -38,6 +47,11 @@ echo "\nYou chose: $type\n";
 
 // Step 2: Copy bootstrap file
 if ($type === 'api') {
+    if (!file_exists($templates . 'bootstrap-app-api.php')) {
+        echo "Error: API bootstrap template not found at $templates/bootstrap-app-api.php\n";
+        exit(1);
+    }
+
     copy($templates . 'bootstrap-app-api.php', $bootstrapFile);
     echo "Bootstrap file set for API project.\n";
 
@@ -60,6 +74,11 @@ PHP;
     file_put_contents($apiRoutes, $apiContent);
 
 } else { // web
+    if (!file_exists($templates . 'bootstrap-app-web.php')) {
+        echo "Error: Web bootstrap template not found at $templates/bootstrap-app-web.php\n";
+        exit(1);
+    }
+
     copy($templates . 'bootstrap-app-web.php', $bootstrapFile);
     echo "Bootstrap file set for Web project.\n";
 
