@@ -45,10 +45,21 @@ if ($type === 'api') {
     if (file_exists($webRoutes)) unlink($webRoutes);
     if (is_dir($viewsPath)) deleteFolder($viewsPath);
 
-    // Ensure API route exists
-    if (!file_exists($apiRoutes)) file_put_contents($apiRoutes, "<?php\n// API routes\n");
+    // Ensure API route exists with ping
+    $apiContent = <<<PHP
+<?php
 
-} else {
+use Illuminate\Support\Facades\Route;
+
+Route::get('/ping', function() {
+    return response()->json(['pong' => true]);
+});
+
+// Add other API routes below
+PHP;
+    file_put_contents($apiRoutes, $apiContent);
+
+} else { // web
     copy($templates . 'bootstrap-app-web.php', $bootstrapFile);
     echo "Bootstrap file set for Web project.\n";
 
@@ -56,7 +67,9 @@ if ($type === 'api') {
     if (file_exists($apiRoutes)) unlink($apiRoutes);
 
     // Ensure Web route exists
-    if (!file_exists($webRoutes)) file_put_contents($webRoutes, "<?php\nuse Illuminate\Support\Facades\Route;\nRoute::get('/', fn() => view('welcome'));\n");
+    if (!file_exists($webRoutes)) {
+        file_put_contents($webRoutes, "<?php\nuse Illuminate\Support\Facades\Route;\nRoute::get('/', fn() => view('welcome'));\n");
+    }
 
     // Ensure views exist
     if (!is_dir($viewsPath)) mkdir($viewsPath, 0755, true);
