@@ -21,6 +21,7 @@ $envPath = $laravel . '.env';
 $envExample = $laravel . '.env.example';
 $providerPath = $laravel . 'app/Providers/AppServiceProvider.php';
 $bootstrapFile = $laravel . 'bootstrap/app.php';
+$templatesPath = $root . 'templates/';
 
 // Helper to create .keep files
 function createKeepFile($path) {
@@ -54,7 +55,16 @@ if (!file_exists($databasePath)) {
     echo "SQLite database created: $databasePath\n";
 }
 
-// Step 4: Setup Web or API
+// Step 4: Copy bootstrap template
+if ($type === 'api') {
+    copy($templatesPath . 'bootstrap-app-api.php', $bootstrapFile);
+    echo "Bootstrap file set for API project.\n";
+} else {
+    copy($templatesPath . 'bootstrap-app-web.php', $bootstrapFile);
+    echo "Bootstrap file set for Web project.\n";
+}
+
+// Step 5: Setup Web or API
 if ($type === 'api') {
     echo "Setting up API project...\n";
 
@@ -153,37 +163,10 @@ PHP;
         }
     }
 
-    // Update bootstrap/app.php for API
-    if (file_exists($bootstrapFile)) {
-        $content = file_get_contents($bootstrapFile);
-
-        // Add or replace api route line
-        if (!str_contains($content, "api: __DIR__.'/../routes/api.php'")) {
-            // Add api line after return Application::configure(...)
-            $content = preg_replace(
-                "/return Application::configure\(basePath: dirname\(__DIR__\)\)/",
-                "return Application::configure(basePath: dirname(__DIR__))
-    ->withRouting(
-        api: __DIR__.'/../routes/api.php',",
-                $content
-            );
-            // Comment web route if exists
-            $content = preg_replace(
-                "/web: __DIR__.'\/\.\.\/routes\/web\.php'/",
-                "// web: __DIR__.'/../routes/web.php',",
-                $content
-            );
-        }
-        file_put_contents($bootstrapFile, $content);
-        echo "Bootstrap file updated for API project.\n";
-    }
-
     // Install Sanctum
     echo "Installing Laravel Sanctum...\n";
     shell_exec("composer require laravel/sanctum");
     shell_exec("php " . escapeshellarg($laravel . "artisan") . " vendor:publish --provider=\"Laravel\\Sanctum\\SanctumServiceProvider\"");
-    shell_exec("php " . escapeshellarg($laravel . "artisan") . " migrate");
-
 } else {
     echo "Setting up Web project...\n";
 
@@ -201,42 +184,18 @@ PHP;
     // Routes
     file_put_contents($webRoutes, "<?php\nuse Illuminate\Support\Facades\Route;\nRoute::get('/', fn() => view('welcome'));\n");
     file_put_contents($apiRoutes, "<?php\n// API routes disabled for Web project.\n");
-
-    // Update bootstrap/app.php for Web
-    if (file_exists($bootstrapFile)) {
-        $content = file_get_contents($bootstrapFile);
-
-        // Add or replace web route line
-        if (!str_contains($content, "web: __DIR__.'/../routes/web.php'")) {
-            $content = preg_replace(
-                "/return Application::configure\(basePath: dirname\(__DIR__\)\)/",
-                "return Application::configure(basePath: dirname(__DIR__))
-    ->withRouting(
-        web: __DIR__.'/../routes/web.php',",
-                $content
-            );
-            // Comment api route if exists
-            $content = preg_replace(
-                "/api: __DIR__.'\/\.\.\/routes\/api\.php'/",
-                "// api: __DIR__.'/../routes/api.php',",
-                $content
-            );
-        }
-        file_put_contents($bootstrapFile, $content);
-        echo "Bootstrap file updated for Web project.\n";
-    }
 }
 
-// Step 5: Artisan commands
+// Step 6: Artisan commands
 echo "Generating key and migrating database...\n";
 $artisan = escapeshellarg($laravel . 'artisan');
 shell_exec("php $artisan key:generate");
 shell_exec("php $artisan migrate --force");
 
-// Step 6: Frontend (npm/Vite)
+// Step 7: Frontend (npm/Vite)
 if (file_exists($laravel . 'package.json')) {
     echo "Installing frontend dependencies...\n";
     shell_exec("cd " . escapeshellarg($laravel) . " && npm install && npm run build");
 }
 
-echo "\n✅ Setup complete! Your Laravel project is ready in src/\n";
+echo "\n Setup complete! Your Laravel project is ready in src (M.F)/\n";
