@@ -2,7 +2,6 @@
   "$schema": "https://getcomposer.org/schema.json",
   "name": "mfelfelani72/laravel-sky",
   "description": "My Laravel starter template",
-  "type": "project",
   "keywords": [
     "laravel",
     "framework"

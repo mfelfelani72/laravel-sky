@@ -1,7 +1,14 @@
 <?php
+
+/**
+ * Laravel Starter Setup Script
+ * Works with src/ structure, vendor inside src/, Web/API selection
+ */
+
 $root = __DIR__ . '/../';
 $laravel = $root . 'src/';
 
+// Paths
 $controllersPath = $laravel . 'app/Http/Controllers';
 $apiControllersPath = $controllersPath . '/API';
 $webControllersPath = $controllersPath . '/Web';
@@ -9,8 +16,16 @@ $viewsPath = $laravel . 'resources/views';
 $apiRoutes = $laravel . 'routes/api.php';
 $webRoutes = $laravel . 'routes/web.php';
 $middlewaresPath = $laravel . 'app/Http/Middleware';
+$databasePath = $laravel . 'database/database.sqlite';
+$envPath = $laravel . '.env';
+$envExample = $laravel . '.env.example';
 
-// Ask the user
+// Helper to create .keep files
+function createKeepFile($path) {
+    if (!file_exists($path . '/.keep')) file_put_contents($path . '/.keep', '');
+}
+
+// Step 1: Ask for project type
 $handle = fopen("php://stdin", "r");
 echo "Which type of project do you want? (web/api) [web]: ";
 $type = trim(fgets($handle));
@@ -19,26 +34,39 @@ fclose($handle);
 
 echo "\nYou chose: $type\n";
 
-// Helper to create .keep files
-function createKeepFile($path) {
-    if (!file_exists($path . '/.keep')) file_put_contents($path . '/.keep', '');
+// Step 2: Ensure .env exists
+if (!file_exists($envPath)) {
+    if (file_exists($envExample)) {
+        copy($envExample, $envPath);
+        echo ".env created from .env.example\n";
+    } else {
+        file_put_contents($envPath, "APP_NAME=Laravel\nAPP_ENV=local\nAPP_KEY=\nAPP_DEBUG=true\nAPP_URL=http://localhost\n");
+        echo ".env created with defaults\n";
+    }
 }
 
-// Setup API or Web
+// Step 3: Create SQLite file if needed
+if (!file_exists($databasePath)) {
+    if (!is_dir(dirname($databasePath))) mkdir(dirname($databasePath), 0755, true);
+    touch($databasePath);
+    echo "SQLite database created: $databasePath\n";
+}
+
+// Step 4: Setup Web or API
 if ($type === 'api') {
     echo "Setting up API project...\n";
 
-    // Remove Web-specific folders
+    // Remove Web-specific
     if (is_dir($webControllersPath)) system("rm -rf " . escapeshellarg($webControllersPath));
     if (is_dir($viewsPath)) system("rm -rf " . escapeshellarg($viewsPath));
 
-    // Create API controllers
+    // Create API Controllers
     if (!is_dir($apiControllersPath)) mkdir($apiControllersPath, 0755, true);
     createKeepFile($apiControllersPath);
 
     // Routes
     file_put_contents($webRoutes, "<?php\n// Web routes disabled for API project.\n");
-    file_put_contents($apiRoutes, "<?php\nuse Illuminate\Support\Facades\Route;\nRoute::get('/ping', function() {\n    return response()->json(['pong'=>true]);\n});\n");
+    file_put_contents($apiRoutes, "<?php\nuse Illuminate\Support\Facades\Route;\nRoute::get('/ping', function() {\n    return response()->json(['pong' => true]);\n});\n");
 
     // Middleware example
     if (!is_dir($middlewaresPath)) mkdir($middlewaresPath, 0755, true);
@@ -66,7 +94,7 @@ PHP
     // Remove API-specific
     if (is_dir($apiControllersPath)) system("rm -rf " . escapeshellarg($apiControllersPath));
 
-    // Create Web controllers
+    // Web Controllers
     if (!is_dir($webControllersPath)) mkdir($webControllersPath, 0755, true);
     createKeepFile($webControllersPath);
 
@@ -79,15 +107,17 @@ PHP
     file_put_contents($apiRoutes, "<?php\n// API routes disabled for Web project.\n");
 }
 
-// Artisan commands
+// Step 5: Artisan commands
 echo "Generating key and migrating database...\n";
-shell_exec("php " . escapeshellarg($laravel . "artisan key:generate"));
-shell_exec("php " . escapeshellarg($laravel . "artisan migrate --force"));
+$artisan = escapeshellarg($laravel . 'artisan');
 
-// Front-end (npm)
+shell_exec("php $artisan key:generate");
+shell_exec("php $artisan migrate --force");
+
+// Step 6: Frontend (npm/Vite)
 if (file_exists($laravel . 'package.json')) {
     echo "Installing frontend dependencies...\n";
     shell_exec("cd " . escapeshellarg($laravel) . " && npm install && npm run build");
 }
 
-echo "Setup complete! 🚀\n";
+echo "\n✅ Setup complete! Your Laravel project is ready in src/\n";
