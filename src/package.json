@@ -1,7 +1,7 @@
 {
     "$schema": "https://www.schemastore.org/package.json",
     "private": true,
-    "type": "project",
+    "type": "module",
     "scripts": {
         "build": "vite build",
         "dev": "vite"
